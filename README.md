@@ -12,7 +12,7 @@ This project builds a machine learning system to predict startup success probabi
 
 ---
 
-## ⚙️ Workflow
+##  Workflow
 - Data Collection & Cleaning  
 - Feature Engineering (Funding Efficiency, Growth Potential, Burn Rate)  
 - Model Training & Evaluation  
