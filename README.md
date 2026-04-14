@@ -1,2 +1,14 @@
-# Startup-Health-Intelligence-System
-ML-based system to predict startup success probability, failure risk, and financial runway using feature engineering and real-world data.
+# Startup Health Intelligence System (Ongoing)
+
+This project predicts startup success probability, failure risk, and financial runway using machine learning.
+
+## Features
+- Funding Efficiency Score
+- Growth Potential Score
+- Burn Rate Estimation
+- Startup Health Score
+
+## Tech Stack
+Python, Pandas, Scikit-learn
+
+Status: In Progress
