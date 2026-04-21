@@ -1,38 +1,106 @@
-# Startup Health Intelligence System (Ongoing)
+# Startup Health Intelligence System
 
-This project builds a machine learning system to predict startup success probability, failure risk, and financial runway using advanced feature engineering and real-world data.
-
----
-
-## Features
-- Funding Efficiency Score
-- Growth Potential Score
-- Burn Rate Estimation
-- Startup Health Score
+An end-to-end Machine Learning project that predicts startup success probability, failure risk, and provides a custom health score using funding-based features.
 
 ---
 
-##  Workflow
-- Data Collection & Cleaning  
-- Feature Engineering (Funding Efficiency, Growth Potential, Burn Rate)  
-- Model Training & Evaluation  
-- Prediction & Insights Generation  
+## Problem Statement
+
+Investors and founders often struggle to evaluate startup potential in early stages.
+This project uses historical funding and growth data to predict startup success and financial health.
+
+---
+
+## Key Features
+
+* Feature Engineering:
+
+  * Funding Efficiency
+  * Funding per Year
+  * Log Funding
+
+* Model Training:
+
+  * Logistic Regression
+  * Random Forest
+  * Gradient Boosting
+  * XGBoost (Final Model)
+
+* Custom Outputs:
+
+  * Success Probability
+  * Health Score (0–100)
+
+* Deployment:
+
+  * Streamlit-based interactive dashboard
+
+---
+
+## Key Insights
+
+* Feature engineering significantly improved model performance.
+* Dataset was highly imbalanced, so recall and ROC-AUC were prioritized over accuracy.
+* XGBoost performed best in identifying successful startups.
+
+---
+
+## Model Evaluation
+
+| Model               | Performance Insight                     |
+| ------------------- | --------------------------------------- |
+| Logistic Regression | Struggles with non-linear patterns      |
+| Random Forest       | Handles complex relationships well      |
+| Gradient Boosting   | Improves performance on difficult cases |
+| XGBoost             | Best overall performance                |
+
+---
+
+## Project Structure
+
+```
+Startup-Health-Intelligence-System/
+│
+├── dashboard/        # Streamlit app
+├── models/           # Trained pipeline
+├── notebooks/        # EDA and model training
+├── README.md
+├── requirements.txt
+```
+
+---
+
+## Run Locally
+
+```
+cd dashboard
+streamlit run app.py
+```
+
+---
+
+## Live Demo
+
+(Add Streamlit deployment link here)
 
 ---
 
 ## Tech Stack
-- Python  
-- Pandas  
-- Scikit-learn  
+
+* Python
+* Scikit-learn
+* XGBoost
+* Pandas, NumPy
+* Streamlit
 
 ---
 
-## Current Status
-In Progress (Data preprocessing and feature engineering completed, model training ongoing)
+## Author
+
+Nischal Mahajan
 
 ---
 
-## Future Work
-- Improve model accuracy  
-- Deploy using Streamlit dashboard  
-- Add real-time prediction interface  
+## Summary
+
+This project demonstrates a complete machine learning pipeline including data preprocessing, feature engineering, model selection, and deployment in a real-world scenario.
