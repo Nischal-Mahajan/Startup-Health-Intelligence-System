@@ -1,24 +1,16 @@
 import streamlit as st
 import numpy as np
-import pickle
-import os
-import joblib
-# pipeline = joblib.load(model_path)
-
-# # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# # model_path = os.path.join(BASE_DIR, "models", "pipeline.pkl")
-
-# pipeline = pickle.load(open(model_path, "rb"))
-
-
 import os
 import joblib
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, "models", "pipeline.pkl")
 
+if not os.path.exists(model_path):
+    st.error(f"Model file not found at: {model_path}")
+    st.stop()
+
 pipeline = joblib.load(model_path)
-# Load pipeline
 
 # Page config
 st.set_page_config(page_title="Startup Intelligence System", layout="centered")
@@ -71,7 +63,7 @@ if st.button("🔍 Predict Success"):
         np.array([[funding_efficiency, funding_per_year, log_funding]])
     )[0][1])
 
-    # 🔥 Adjusted Probability (important)
+    # Adjusted Probability
     adjusted_prob = 0.7 * base_prob + 0.3 * (health_score / 100)
 
     # Results
@@ -106,7 +98,6 @@ if st.button("🔍 Predict Success"):
 
     # Insights
     st.markdown("### 🔍 Key Insights")
-
     st.write(f"• Funding Efficiency: ${funding_efficiency:,.0f}")
     st.write(f"• Funding per Year: ${funding_per_year:,.0f}")
     st.write(f"• Log Funding: {log_funding:.2f}")
