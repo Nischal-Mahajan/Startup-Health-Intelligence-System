@@ -2,12 +2,22 @@ import streamlit as st
 import numpy as np
 import pickle
 import os
+import joblib
+# pipeline = joblib.load(model_path)
 
+# # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# # model_path = os.path.join(BASE_DIR, "models", "pipeline.pkl")
+
+# pipeline = pickle.load(open(model_path, "rb"))
+
+
+import os
+import joblib
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, "models", "pipeline.pkl")
 
-pipeline = pickle.load(open(model_path, "rb"))
+pipeline = joblib.load(model_path)
 # Load pipeline
 
 # Page config
