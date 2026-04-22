@@ -3,8 +3,7 @@ import numpy as np
 import pickle
 
 # Load pipeline
-pipeline = pickle.load(open("../models/pipeline.pkl", "rb"))
-
+pipeline = pickle.load(open("models/pipeline.pkl", "rb"))
 # Page config
 st.set_page_config(page_title="Startup Intelligence System", layout="centered")
 
