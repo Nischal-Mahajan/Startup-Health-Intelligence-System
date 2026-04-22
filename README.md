@@ -4,6 +4,12 @@ An end-to-end Machine Learning project that predicts startup success probability
 
 ---
 
+## Live Demo
+
+https://startup-health-intelligence-system-4ikqyscwe2trtuq8bkfmwz.streamlit.app/
+
+---
+
 ## Problem Statement
 
 Investors and founders often struggle to evaluate startup potential in early stages.
