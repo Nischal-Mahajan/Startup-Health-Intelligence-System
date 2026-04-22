@@ -1,9 +1,15 @@
 import streamlit as st
 import numpy as np
 import pickle
+import os
 
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_path = os.path.join(BASE_DIR, "models", "pipeline.pkl")
+
+pipeline = pickle.load(open(model_path, "rb"))
 # Load pipeline
-pipeline = pickle.load(open("models/pipeline.pkl", "rb"))
+
 # Page config
 st.set_page_config(page_title="Startup Intelligence System", layout="centered")
 
@@ -28,7 +34,7 @@ with col1:
     total_funding = st.number_input("💰 Total Funding ($)", 0.0, 1000000.0)
 
 with col2:
-    funding_rounds = st.number_input("🔁 Funding Rounds", 0, 2)
+    funding_rounds = st.number_input("Funding Rounds", min_value=0)
 
 startup_age = st.slider("📅 Startup Age (years)", 0, 30, 3)
 
