@@ -11,6 +11,14 @@ from sklearn.pipeline import Pipeline
 import traceback
 import streamlit as st
 
+model_path = "models/pipeline.pkl"  # your correct path
+
+try:
+    pipeline = joblib.load(model_path)
+    st.success("Model loaded successfully ✅")
+except Exception as e:
+    st.error("REAL ERROR BELOW 👇")
+    st.code(traceback.format_exc())
 
 
 # if you created custom class:
