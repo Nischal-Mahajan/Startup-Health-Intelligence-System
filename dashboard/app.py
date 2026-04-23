@@ -4,6 +4,17 @@ import pandas as pd
 import os
 import joblib
 import plotly.graph_objects as go
+# import EVERYTHING used in pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+import traceback
+import streamlit as st
+
+
+
+# if you created custom class:
+# from ..utils.feature_engineering import FeatureEngineer  # adjust path
 
 # ─── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -23,7 +34,11 @@ if not os.path.exists(model_path):
     st.stop()
 
 pipeline = joblib.load(model_path)
-
+try:
+    pipeline = joblib.load(model_path)
+except Exception as e:
+    st.error(str(e))
+    st.text(traceback.format_exc())
 
 # ─── Feature Engineering (matches training pipeline exactly) ───────────────────
 DEPLOY_FEATURES = [
