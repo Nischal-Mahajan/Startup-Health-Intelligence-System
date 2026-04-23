@@ -8,17 +8,17 @@ import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
-import traceback
-import streamlit as st
+# import traceback
+# import streamlit as st
 
-model_path = "models/pipeline.pkl"  # your correct path
+# model_path = "models/pipeline.pkl"  # your correct path
 
-try:
-    pipeline = joblib.load(model_path)
-    st.success("Model loaded successfully ✅")
-except Exception as e:
-    st.error("REAL ERROR BELOW 👇")
-    st.code(traceback.format_exc())
+# try:
+#     pipeline = joblib.load(model_path)
+#     st.success("Model loaded successfully ✅")
+# except Exception as e:
+#     st.error("REAL ERROR BELOW 👇")
+#     st.code(traceback.format_exc())
 
 
 # if you created custom class:
@@ -42,11 +42,11 @@ if not os.path.exists(model_path):
     st.stop()
 
 pipeline = joblib.load(model_path)
-try:
-    pipeline = joblib.load(model_path)
-except Exception as e:
-    st.error(str(e))
-    st.text(traceback.format_exc())
+# try:
+#     pipeline = joblib.load(model_path)
+# except Exception as e:
+#     st.error(str(e))
+#     st.text(traceback.format_exc())
 
 # ─── Feature Engineering (matches training pipeline exactly) ───────────────────
 DEPLOY_FEATURES = [
@@ -816,7 +816,7 @@ def make_forecast_bar(current, projected):
     fig.add_trace(go.Bar(
         x=["Current", "2-Year Forecast"],
         y=[current, projected],
-        marker=dict(color=["#6B7280", "#22C55E"], cornerradius=4),
+        marker=dict(color=["#6B7280", "#22C55E"]),
         text=[f"{current:.1f}%", f"{projected:.1f}%"],
         textposition="outside",
         textfont=dict(color="#F9FAFB", size=14, family="DM Mono"),
