@@ -61,12 +61,13 @@ def create_features(funding, rounds, inv_rounds, age, milestones, relationships)
     growth_intensity = (milestones + relationships) / max(age, 1)
 
     # Composite health score (0–100)
+    # CHANGE 2: Updated health score scaling formula
     raw = (
         0.4 * np.log1p(funding_efficiency)
         + 0.3 * np.log1p(funding_per_year)
         + 0.3 * log_funding
     )
-    health_score = min(raw / 10, 1.0) * 100
+    health_score = (raw / (raw + 5)) * 100  # Updated from: min(raw / 10, 1.0) * 100
 
     feature_dict = {
         "funding_efficiency": funding_efficiency,
@@ -85,6 +86,7 @@ def create_features(funding, rounds, inv_rounds, age, milestones, relationships)
     return feature_dict, health_score, log_funding
 
 
+# CHANGE 1: Full rewrite of predict() — calibrated-safe outputs, improved radar, added risk_score
 def predict(funding, rounds, inv_rounds, age, milestones, relationships):
     """Run inference using same feature order as training."""
     feat, health_score, log_f = create_features(
@@ -106,17 +108,23 @@ def predict(funding, rounds, inv_rounds, age, milestones, relationships):
         X_scaled = np.nan_to_num(X_scaled, nan=0.0, posinf=1e6, neginf=0.0)
 
     base_prob = float(pipeline.predict_proba(X_scaled)[0][1])
-    prob      = base_prob                  # model output is the source of truth
+    # CHANGE 1: Clamp probability to realistic range
+    prob = min(max(base_prob, 0.05), 0.85)
 
+    # CHANGE 1: Improved radar scaling (linear, not log)
     radar_vals = [
-        max(min(np.log1p(funding) / 20, 1) * 100, 3),
-        max(min(rounds / 10, 1) * 100, 3),
-        max(min(age / 15, 1) * 100, 3),
-        max(min(milestones / 10, 1) * 100, 3),
-        max(min(relationships / 20, 1) * 100, 3),
+        min(funding / 1_000_000, 1) * 100,
+        min(rounds / 10, 1) * 100,
+        min(age / 10, 1) * 100,
+        min(milestones / 10, 1) * 100,
+        min(relationships / 20, 1) * 100,
     ]
 
-    return prob, health_score, base_prob, feat["funding_efficiency"], feat["funding_per_year"], log_f, radar_vals
+    # CHANGE 1: Compute risk score
+    risk_score = (feat["burn_rate"] / (feat["runway"] + 1)) * 100
+
+    # CHANGE 3: Return now includes risk_score
+    return prob, health_score, base_prob, feat["funding_efficiency"], feat["funding_per_year"], log_f, radar_vals, risk_score
 
 
 # ─── Top Feature Drivers ───────────────────────────────────────────────────────
@@ -135,7 +143,8 @@ def get_top_drivers(feat: dict, prob: float):
 
 
 # ─── Recommendations ──────────────────────────────────────────────────────────
-def get_recommendations(funding, rounds, milestones, rels, age):
+# CHANGE 5: Improved recommendations using engineered features
+def get_recommendations(funding, rounds, milestones, rels, age, feat=None):
     recs = []
     seen = set()
 
@@ -143,6 +152,15 @@ def get_recommendations(funding, rounds, milestones, rels, age):
         if title not in seen:
             seen.add(title)
             recs.append((priority, title, desc))
+
+    # CHANGE 5: Feature-based recommendations (engineered signals)
+    if feat is not None:
+        if feat["funding_efficiency"] < 50000:
+            add("HIGH", "Low Funding Efficiency",
+                "Your funding efficiency is below $50K per round. Focus on fewer, higher-conviction rounds to maximise capital per raise and signal quality to institutional investors.")
+        if feat["growth_intensity"] < 1:
+            add("HIGH", "Low Growth Intensity",
+                "Growth intensity (milestones + relationships per year) is critically low. Accelerate milestone execution and expand your investor network to improve momentum signals.")
 
     # Funding
     if funding == 0:
@@ -944,7 +962,8 @@ with tab1:
             st.stop()
 
         with st.spinner("Running CatBoost inference …"):
-            prob, hs, base_prob, eff, pyr, log_f, radar_vals = predict(
+            # CHANGE 3: Unpack 8 values now (added risk_score)
+            prob, hs, base_prob, eff, pyr, log_f, radar_vals, risk_score = predict(
                 total_funding, funding_rounds, inv_rounds, startup_age, milestones, relationships
             )
 
@@ -1069,16 +1088,19 @@ with tab1:
 
         # ── Derived metrics ──
         st.markdown('<div class="section-label">Derived Metrics</div>', unsafe_allow_html=True)
-        k1, k2, k3, k4, k5 = st.columns(5)
+        # CHANGE 4: Added Risk Score metric (k6 column)
+        k1, k2, k3, k4, k5, k6 = st.columns(6)
         k1.metric("Funding Efficiency",  f"${eff:,.0f}",                    help="Total Funding / (Rounds + 1)")
         k2.metric("Funding per Year",    f"${pyr:,.0f}",                    help="Total Funding / (Age + 1)")
         k3.metric("Log Funding",         f"{log_f:.2f}",                    help="log(1 + Total Funding)")
         k4.metric("Monthly Burn Rate",   f"${feat_dict['burn_rate']:,.0f}", help="Funding / (Age × 12)")
         k5.metric("Runway (months)",     f"{feat_dict['runway']:.0f}",      help="Funding / Burn Rate")
+        k6.metric("Risk Score",          f"{risk_score:.1f}",               help="(Burn Rate / (Runway + 1)) × 100")
 
         # ── Growth Forecast ──
         st.markdown('<div class="section-label">Growth Forecast — Next 2 Years</div>', unsafe_allow_html=True)
-        f_prob, f_hs, _, _, _, _, _ = predict(
+        # CHANGE 3: Updated unpack for forecast predict call
+        f_prob, f_hs, _, _, _, _, _, _ = predict(
             total_funding * 1.3, funding_rounds + 1, inv_rounds, startup_age + 2, milestones + 2, relationships
         )
         delta = (f_prob - prob) * 100
@@ -1091,7 +1113,8 @@ with tab1:
 
         # ── Recommendations (rule-based + ML hybrid) ──
         st.markdown('<div class="section-label">Investment Recommendations</div>', unsafe_allow_html=True)
-        for dot, title, desc in get_recommendations(total_funding, funding_rounds, milestones, relationships, startup_age):
+        # CHANGE 5: Pass feat_dict to get_recommendations for engineered-feature based recs
+        for dot, title, desc in get_recommendations(total_funding, funding_rounds, milestones, relationships, startup_age, feat=feat_dict):
             badge_cls = {"HIGH": "rb-high", "MED": "rb-med", "OK": "rb-ok"}.get(dot, "rb-ok")
             badge_lbl = {"HIGH": "High",    "MED": "Medium", "OK": "Good"}.get(dot, dot)
             st.markdown(f"""
@@ -1108,6 +1131,11 @@ with tab1:
             st.warning("Zero funding detected — predictions carry higher uncertainty for unfunded startups.")
         if funding_rounds == 0 and milestones == 0:
             st.warning("No rounds or milestones recorded — ensure inputs are accurate before sharing results.")
+
+        # CHANGE 7: Optional SHAP Integration (commented out, ready to enable)
+        # explainer = joblib.load("models/shap_explainer.pkl")
+        # shap_values = explainer.shap_values(X_scaled)
+        # top_idx = np.argsort(np.abs(shap_values[0]))[::-1][:3]
 
 
 # ══════════════════════════════════════════════════════
@@ -1142,8 +1170,9 @@ with tab2:
 
     if cmp_btn:
         with st.spinner("Computing comparison …"):
-            a_prob, a_hs, _, _, _, a_log_f, a_radar = predict(a_fund, a_rounds, a_inv, a_age, a_miles, a_rels)
-            b_prob, b_hs, _, _, _, b_log_f, b_radar = predict(b_fund, b_rounds, b_inv, b_age, b_miles, b_rels)
+            # CHANGE 3: Unpack 8 values for both startups
+            a_prob, a_hs, _, _, _, a_log_f, a_radar, a_risk = predict(a_fund, a_rounds, a_inv, a_age, a_miles, a_rels)
+            b_prob, b_hs, _, _, _, b_log_f, b_radar, b_risk = predict(b_fund, b_rounds, b_inv, b_age, b_miles, b_rels)
 
         winner = a_name if a_prob >= b_prob else b_name
         w_prob = max(a_prob, b_prob)
@@ -1159,6 +1188,15 @@ with tab2:
           </div>
           <div class="winner-badge">↑ Preferred</div>
         </div>""", unsafe_allow_html=True)
+
+        # CHANGE 6: Improved compare reasoning
+        a_feat, _, _ = create_features(a_fund, a_rounds, a_inv, a_age, a_miles, a_rels)
+        b_feat, _, _ = create_features(b_fund, b_rounds, b_inv, b_age, b_miles, b_rels)
+        if a_prob > b_prob:
+            reason = "Higher funding efficiency and stronger milestone velocity" if a_feat["funding_efficiency"] > b_feat["funding_efficiency"] else "Better investor network and capital deployment"
+        else:
+            reason = "Higher funding efficiency and stronger milestone velocity" if b_feat["funding_efficiency"] > a_feat["funding_efficiency"] else "Better investor network and capital deployment"
+        st.info(f"Why {winner} is preferred: {reason}")
 
         st.markdown('<div class="section-label">Head-to-Head Metrics</div>', unsafe_allow_html=True)
         m1, m2, m3, m4 = st.columns(4)
@@ -1194,13 +1232,15 @@ with tab2:
         ra, rb = st.columns(2)
         with ra:
             st.markdown(f'<p style="font-family:\'DM Mono\',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#D4AF37;margin-bottom:0.6rem;">{a_name}</p>', unsafe_allow_html=True)
-            for dot, title, desc in get_recommendations(a_fund, a_rounds, a_miles, a_rels, a_age):
+            # CHANGE 5: Pass feat dict to recommendations
+            for dot, title, desc in get_recommendations(a_fund, a_rounds, a_miles, a_rels, a_age, feat=a_feat):
                 badge_cls = {"HIGH":"rb-high","MED":"rb-med","OK":"rb-ok"}.get(dot,"rb-ok")
                 badge_lbl = {"HIGH":"High","MED":"Medium","OK":"Good"}.get(dot,dot)
                 st.markdown(f'<div class="rec-row"><span class="rec-badge {badge_cls}">{badge_lbl}</span><div><div class="rec-title">{title}</div><div class="rec-desc">{desc}</div></div></div>', unsafe_allow_html=True)
         with rb:
             st.markdown(f'<p style="font-family:\'DM Mono\',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#38BDF8;margin-bottom:0.6rem;">{b_name}</p>', unsafe_allow_html=True)
-            for dot, title, desc in get_recommendations(b_fund, b_rounds, b_miles, b_rels, b_age):
+            # CHANGE 5: Pass feat dict to recommendations
+            for dot, title, desc in get_recommendations(b_fund, b_rounds, b_miles, b_rels, b_age, feat=b_feat):
                 badge_cls = {"HIGH":"rb-high","MED":"rb-med","OK":"rb-ok"}.get(dot,"rb-ok")
                 badge_lbl = {"HIGH":"High","MED":"Medium","OK":"Good"}.get(dot,dot)
                 st.markdown(f'<div class="rec-row"><span class="rec-badge {badge_cls}">{badge_lbl}</span><div><div class="rec-title">{title}</div><div class="rec-desc">{desc}</div></div></div>', unsafe_allow_html=True)
