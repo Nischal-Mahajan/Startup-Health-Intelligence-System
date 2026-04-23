@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import os
 import joblib
 import plotly.graph_objects as go
@@ -22,24 +23,23 @@ if not os.path.exists(model_path):
     st.stop()
 
 pipeline = joblib.load(model_path)
-scaler   = joblib.load(scaler_path) if os.path.exists(scaler_path) else None
+
 
 # ─── Feature Engineering (matches training pipeline exactly) ───────────────────
 DEPLOY_FEATURES = [
     "funding_efficiency",
     "funding_per_year",
     "log_funding",
-    "milestones_achieved",
+    "milestones",              # FIX
     "relationships",
     "investment_rounds",
     "startup_age",
-    "funding_rounds",
+    "funding_rounds_count",    # FIX
     "burn_rate",
     "runway",
     "growth_intensity",
     "health_score",
 ]
-
 SCALE_FEATURES = [
     "funding_efficiency",
     "funding_per_year",
@@ -48,6 +48,8 @@ SCALE_FEATURES = [
     "runway",
     "growth_intensity",
 ]
+
+
 
 def create_features(funding, rounds, inv_rounds, age, milestones, relationships):
     """Compute all 12 deploy features — mirrors training pipeline."""
@@ -70,18 +72,18 @@ def create_features(funding, rounds, inv_rounds, age, milestones, relationships)
     health_score = (raw / (raw + 5)) * 100  # Updated from: min(raw / 10, 1.0) * 100
 
     feature_dict = {
-        "funding_efficiency": funding_efficiency,
-        "funding_per_year":   funding_per_year,
-        "log_funding":        log_funding,
-        "milestones_achieved": float(milestones),
-        "relationships":      float(relationships),
-        "investment_rounds":  float(inv_rounds),
-        "startup_age":        float(age),
-        "funding_rounds":     float(rounds),
-        "burn_rate":          burn_rate,
-        "runway":             runway,
-        "growth_intensity":   growth_intensity,
-        "health_score":       health_score,
+    "funding_efficiency": funding_efficiency,
+    "funding_per_year":   funding_per_year,
+    "log_funding":        log_funding,
+    "milestones":         float(milestones),        # ✅ FIXED
+    "relationships":      float(relationships),
+    "investment_rounds":  float(inv_rounds),
+    "startup_age":        float(age),
+    "funding_rounds_count": float(rounds),          # ✅ FIXED
+    "burn_rate":          burn_rate,
+    "runway":             runway,
+    "growth_intensity":   growth_intensity,
+    "health_score":       health_score,
     }
     return feature_dict, health_score, log_funding
 
@@ -96,18 +98,17 @@ def predict(funding, rounds, inv_rounds, age, milestones, relationships):
     X_raw = np.array([[feat[k] for k in DEPLOY_FEATURES]])
 
     # Apply scaler only to scale-required features if scaler is present
-    if scaler is not None:
-        scale_idx = [DEPLOY_FEATURES.index(f) for f in SCALE_FEATURES]
-        X_scaled  = X_raw.copy()
-        X_scaled[:, scale_idx] = scaler.transform(X_raw[:, scale_idx])
-    else:
-        X_scaled = X_raw
+    X_input = pd.DataFrame([feat])[DEPLOY_FEATURES]
+
+    base_prob = float(pipeline.predict_proba(X_input)[0][1])
 
     # Validate — no NaN / inf
-    if not np.isfinite(X_scaled).all():
-        X_scaled = np.nan_to_num(X_scaled, nan=0.0, posinf=1e6, neginf=0.0)
+    X_input = pd.DataFrame([feat])[DEPLOY_FEATURES]
 
-    base_prob = float(pipeline.predict_proba(X_scaled)[0][1])
+    if not np.isfinite(X_input.values).all():
+        X_input = X_input.replace([np.inf, -np.inf], 0).fillna(0)
+
+    base_prob = float(pipeline.predict_proba(X_input)[0][1])
     # CHANGE 1: Clamp probability to realistic range
     prob = min(max(base_prob, 0.05), 0.85)
 
@@ -133,7 +134,7 @@ def get_top_drivers(feat: dict, prob: float):
     scores = {
         "Funding Efficiency":  min(np.log1p(feat["funding_efficiency"]) / 15, 1),
         "Funding per Year":    min(np.log1p(feat["funding_per_year"]) / 15, 1),
-        "Milestones Achieved": min(feat["milestones_achieved"] / 10, 1),
+        "Milestones Achieved": min(feat["milestones"] / 10, 1),
         "Investor Network":    min(feat["relationships"] / 20, 1),
         "Runway":              min(feat["runway"] / 36, 1),
         "Growth Intensity":    min(feat["growth_intensity"] / 5, 1),
