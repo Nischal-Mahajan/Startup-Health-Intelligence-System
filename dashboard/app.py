@@ -839,7 +839,7 @@ def make_compare_bar(a_name, b_name, a_vals, b_vals, metrics):
     for name, vals, color in [(a_name, a_vals, C_GOLD), (b_name, b_vals, C_NEUTRAL)]:
         fig.add_trace(go.Bar(
             name=name, x=metrics, y=vals,
-            marker=dict(color=color, cornerradius=3),
+            marker=dict(color=color),
             text=[f"{v:.1f}" for v in vals],
             textposition="outside",
             textfont=dict(color="#F9FAFB", size=12, family="DM Mono"),
