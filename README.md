@@ -54,7 +54,6 @@ This system leverages historical funding patterns, growth signals, and engineere
 ## 📸 App Screenshots
 
 ### 🔍 Startup Prediction Dashboard
-![Prediction Dashboard](https://startup-health-intelligence-system-4ikqyscwe2trtuq8bkfmwz.streamlit.app/)
 
 > 💡 **[👉 Try the Live App Here](https://startup-health-intelligence-system-4ikqyscwe2trtuq8bkfmwz.streamlit.app/)** — Enter any startup's funding details and get instant predictions.
 
